@@ -1,0 +1,305 @@
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center; 
+    align-items: center;    
+    min-height: 100vh;   
+    height: auto;
+    overflow-y: auto;
+    gap: 20px;               
+    background-color: #202123; 
+    color: #d4d4d8;
+}
+#message {
+    display: none;
+}
+#login_msg {
+    display: none;
+}
+
+.hidden {
+    display: none;
+}
+
+.card {
+    background-color: #2a2a37; 
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+    padding: 24px;
+    margin: 20px auto;
+    width: 90%;
+    max-width: 500px;
+}
+
+
+input[type="text"],
+input[type="password"],
+input[type="file"],
+form input {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 8px;
+    border: 1px solid #3e3f4b;
+    box-sizing: border-box;
+    font-size: 16px;
+    background-color: #373740;
+    color: #d4d4d8;
+}
+
+input[type="text"]::placeholder,
+input[type="password"]::placeholder,
+input[type="file"]::placeholder {
+    color: #909097;
+}
+
+button {
+    background-color: #e4e4e4;
+    color: rgb(0, 0, 0);
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-top: 10px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: background-color 0.2s ease-in-out;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.6);
+}
+
+button:hover {
+    background-color: #638dea;
+}
+
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+ul li {
+    background-color: #333342; 
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+
+#wrapped_creation {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+
+#message {
+    text-align: center;
+    margin: 16px;
+    font-weight: bold;
+    font-size: 16px;
+    color: #e0e0e0;
+}
+
+#client_ul {
+    max-height: 300px; 
+    overflow-y: auto;
+    margin-top: 16px;
+    padding-right: 8px;
+}
+
+#login {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    
+
+    padding: 20px;
+    border: 1px solid #3e3f4b;
+    border-radius: 8px;
+    background: #2a2a37;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    width: 300px;
+    box-sizing: border-box;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.client-list, .wrapped-creation {
+    width: 300px; 
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+#clients_information img {
+    width: 100px;
+    height: auto;
+    cursor: pointer;
+    display: block;
+    margin: 8px auto;
+    transition: transform 0.2s ease;
+    transform-origin: center center;
+}
+
+  
+#clients_information img.large {
+    transform: scale(8);  
+    z-index: 1000;
+}
+ul li {
+    word-wrap: break-word;
+    word-break: break-word; 
+    white-space: normal;    
+    overflow-wrap: break-word;
+
+  
+    background-color: #333342; 
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column; 
+    align-items: flex-start;
+}
+#clients_information textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid #3e3f4b;
+    background-color: #373740;
+    color: #d4d4d8;
+    resize: vertical; 
+    min-height: 50px;
+    line-height: 1.4;
+}
+#see_koreguoti {
+    display: none;
+    background-color: red;
+    color: white;
+}
+#koreguoti_style {
+    background-color: red;
+    color:white
+}
+#atsaukti {
+    display: none;
+    background-color: red;
+    color:white;
+    float: right;
+}
+#koreguoti_style:hover {
+    background-color: rgb(120, 3, 3);
+}
+#atsaukti:hover {
+    background-color: rgb(120, 3, 3);
+}
+#see_koreguoti:hover {
+    background-color: rgb(120, 3, 3);
+}
+#deletion:hover {
+    background-color: rgb(120, 3, 3);
+}
+#deletion {
+    display: none;
+}
+
+#new_pics {
+    display: none;
+    color: white;
+    background-color: red;
+}
+#new_pics:hover {
+    background-color: rgb(120, 3, 3);
+}
+
+#fileUpload {
+    display: none;
+}
+#my_label {
+    display: none;
+}
+
+.pic-container {
+  display: block;
+  margin-bottom: 1em;
+}
+
+
+.pic-container img.client-thumb {
+  display: block;
+  margin-bottom: 0.5em;
+  max-width: 200px;
+}
+
+
+@media (max-width: 600px) {
+    body {
+        padding: 10px;
+        height: auto; 
+    }
+    .card {
+        width: 100%;
+        max-width: none;
+        padding: 16px;
+        margin: 10px 0;
+    }
+    input[type="text"],
+    input[type="password"],
+    input[type="file"],
+    form input {
+        font-size: 14px;
+        padding: 10px;
+    }
+    button {
+        font-size: 14px;
+        padding: 8px 12px;
+        width: 100%;
+    }
+    ul li {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px;
+    }
+    #login {
+        width: 90%;
+        max-width: none;
+        padding: 16px;
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translateX(-50%);
+        box-shadow: 0 0 15px rgba(0,0,0,0.7);
+    }
+    .client-list, .wrapped-creation {
+        width: 100%;
+        margin: 0;
+        padding: 0 10px;
+    }
+    #clients_information img {
+        width: 80px;
+    }
+    #clients_information img.large {
+        transform: scale(4); 
+    }
+    #client_ul {
+        max-height: 200px;
+    }
+    #message {
+        font-size: 14px;
+        margin: 10px;
+    }
+}

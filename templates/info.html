@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klientai</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='info_style.css') }}">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+
+    <div id="login" class="card">
+        <form id="login_form">
+            <input type="text" name="login_vardas" placeholder="Įterpti vardą" id="login_vardas">
+            <input type="password" name="login_slaptazodis" placeholder="Įterpti slaptažodį" id="login_slaptazodis">
+            <button type="button" onclick="submit_login()">Prisijungti</button>
+            <p id="login_msg"></p>
+        </form>
+    </div>
+
+    <div id="client_list" class="card hidden">
+        <input type="text" placeholder="Rasti klientus" id="rasti_kl">
+        <button onclick="find_clients()">Rasti klientus</button>
+        <button onclick="close_clients()">Uždaryti</button>
+        <ul id="client_ul"></ul>
+    </div>
+    
+    <div id="check_client" class="card hidden">
+        <button onclick="close_client_info()">Uždaryti</button>
+        <button onclick="koreguoti_btn()" id="koreguoti_style">Koreguoti</button>
+        <button onclick="atsaukti_btn()" id="atsaukti">Atšaukti</button>
+        <ul id="clients_information"></ul>
+    </div>
+
+    
+    <div id="creation" class="card hidden">
+        <button onclick="create()">Naujas klientas</button>
+    </div>
+
+    <div id="kliento_forma" class="card hidden">
+        <form id="client_form">
+            <input type="text" name="vardas" placeholder="vardas" id="vardas">
+            <input type="text" name="pavarde" placeholder="pavardė" id="pavarde">
+            <input type="text" name="imone" placeholder="įmonė" id="imone">
+            <input type="text" name="adresas" placeholder="adresas" id="adresas">
+            <input type="text" name="pastabos" placeholder="pastabos" id="pastabos">
+            <input type="file" name="nuotrauka" accept="image/*" multiple required><br><br>
+            <button type="button" onclick="issaugot()">Išsaugoti</button>
+        </form>
+        <button onclick="close_creation()">Atšaukti</button>
+    </div>
+
+    <p id="message"></p>
+
+    <script src="{{ url_for('static', filename='info_script.js') }}"></script>
+
+</body>
+</html>
+    
+    <script>
+        const conn = io(); //establishing socketio for connection
+
+        window.addEventListener("DOMContentLoaded", function () {
+        // parsing document.cookie manually
+        const cookies = document.cookie.split(";").reduce((acc, curr) => {
+            const [key, val] = curr.trim().split("=");
+            acc[key] = val;
+            return acc;
+        }, {});
+
+            if (cookies.username) {
+                console.log("User is already logged in:", cookies.username);
+                // Show the div or redirect if already logged in
+                    document.getElementById("login").style.display = "none";
+                    document.getElementById("client_form").style.display = "block";
+                    document.getElementById("client_list").style.display = "block";
+                    document.getElementById("creation").style.display = "block";
+            }
+        });
+
+
+
+        function find_clients() { //emiting the input of who  i want to find and server uses sqlite LIKE to send it back to client
+            document.getElementById("client_ul").style.display = "block";
+
+            const klientu_input = document.getElementById("rasti_kl").value.trim();
+
+            conn.emit("find_clients", {"klientu_search" : klientu_input});
+        }
+
+
+        let clicked_client = [];
+         // i create an array to insert clicked clients info, so that i could trigger a reload of this clients ul after editing that ul
+        conn.on("clients_found", function(client) { // cllient receives a list of inputted value in search clients
+            const clients_ul = document.getElementById("client_ul");
+            clients_ul.innerHTML = "";
+
+            const clients_info_ul = document.getElementById("clients_information");
+
+
+            
+            client.forEach(function(klientai_looped) { // we use for loop since its a list and create li elements with buttons next to each client
+                const edit_btn = document.createElement("button");
+                edit_btn.textContent = "Žiūrėti";
+                
+                
+                const clients_li = document.createElement("li");
+                clients_li.textContent = klientai_looped;
+                
+                clients_li.appendChild(edit_btn);
+                clients_ul.appendChild(clients_li);
+                
+                edit_btn.onclick = function() { //on the ziureti btn, we send out an emit to server to give us a detailed info of that client
+                    document.getElementById("creation").style.display = "none";
+                    document.getElementById("client_list").style.display = "none";
+                    clicked_client.push(klientai_looped);
+                    document.getElementById("atsaukti").style.display = "none";
+                    // document.getElementById("deletion").style.display = "none";
+                            
+                    conn.emit("see_client", {"name" : klientai_looped});
+                    document.getElementById("check_client").style.display = "block";
+                };
+            });
+        });
+
+
+        function close_clients() { // using display block and none for appearance and disappearance of certain divs on button clicks
+            document.getElementById("client_ul").style.display = "none";
+            document.getElementById("creation").style.display = "block";
+            document.getElementById("client_list").style.display = "block";
+        }
+
+
+    
+
+        function create() {
+            document.getElementById("kliento_forma").style.display = "block";
+            document.getElementById("client_list").style.display = "none";
+            document.getElementById("creation").style.display = "none";
+        }
+
+
+        async function issaugot() { //when save button is clicked the form gets sent out with those values using method "POST"
+            const form = document.getElementById("client_form");
+            const msg = document.getElementById("message");
+            const formData = new FormData();
+
+            formData.append("vardas", document.getElementById("vardas").value);
+            formData.append("pavarde", document.getElementById("pavarde").value);
+            formData.append("imone", document.getElementById("imone").value);
+            formData.append("adresas", document.getElementById("adresas").value);
+            formData.append("pastabos", document.getElementById("pastabos").value);
+
+            
+            const picture_added = form.querySelector("input[type='file']"); //selecting files using queryselector
+            if (picture_added.files.length > 0) { //if more than one pic is selected, i use a for loop to append more pictures into the formdata
+                for(let i = 0; i < picture_added.files.length; i++) {
+                    formData.append("nuotrauka", picture_added.files[i]);
+                }
+            }
+
+            msg.style.display = "block";
+            msg.textContent = "Prašome palaukti...";
+            msg.style.color = "black";
+            setTimeout(() => {
+                msg.style.display = "none";
+            }, 3000);
+
+            try { //using try to catch errors from server
+                const response = await fetch('/uploads', {
+                    method: 'POST',
+                    body: formData //sending out the created formdata for server to store it in a directory and in sqlite table
+                });
+
+                const text = await response.json();
+
+                if (response.ok && text.success) {  // if response ok i add it to the html
+                    msg.textContent = "Sekmingai prisijungėte!"; //
+                    msg.style.color = "green";
+                    msg.style.display = "block";
+                    setTimeout(() => {
+                        msg.style.display = "none";
+                    }, 3000);
+                    
+                    form.reset(); //resetting the form to make sure i dont send out previous client info next time
+                } else {
+                    msg.textContent = "Klaidingas prisijungimas.";
+                    msg.style.color = "red";
+                    msg.style.display = "block";
+                    setTimeout(() => {
+                        msg.style.display = "none";
+                    }, 3000);
+                }
+            } catch (error) {
+                msg.textContent = "Serverio klaida.";
+                msg.style.color = "red";
+                msg.style.display = "block";
+                    setTimeout(() => {
+                        msg.style.display = "none";
+                    }, 3000);
+            }
+        }
+        function close_creation() {
+            document.getElementById("kliento_forma").style.display = "none";
+            document.getElementById("client_list").style.display = "block";
+            document.getElementById("creation").style.display = "block";
+        }
+
+
+        async function submit_login() {
+            const form = document.getElementById("login_form");
+            const msg = document.getElementById("message");
+            const formData = new FormData();
+
+            formData.append("login_vardas", document.getElementById("login_vardas").value);
+            formData.append("login_slaptazodis", document.getElementById("login_slaptazodis").value);
+
+            try { //using try to catch errors from server
+                const response = await fetch('/check_login', {
+                    method: 'POST',
+                    body: formData //sending out the created formdata for server to store it in a directory and in sqlite table
+                });
+
+                const text = await response.text();
+
+                if (response.ok) {  // if response ok i add it to the html
+                    msg.textContent = "Sekmingai prisijungėte!"; //
+                    msg.style.color = "green";
+                    msg.style.display = "block";
+                    setTimeout(() => {
+                        msg.style.display = "none";
+                    }, 3000);
+                    document.getElementById("login").style.display = "none";
+                    document.getElementById("client_form").style.display = "block";
+                    document.getElementById("client_list").style.display = "block";
+                    document.getElementById("creation").style.display = "block";
+
+                    
+                    form.reset(); //resetting the form to make sure i dont send out previous client info next time
+                } else {
+                    msg.textContent = "Klaidingas prisijungimas.";
+                    msg.style.color = "red";
+                    msg.style.display = "block";
+                    setTimeout(() => {
+                        msg.style.display = "none";
+                    }, 3000);
+                }
+            } catch (error) {
+                msg.textContent = "Serverio klaida.";
+                msg.style.color = "red";
+                msg.style.display = "block";
+                    setTimeout(() => {
+                        msg.style.display = "none";
+                    }, 3000);
+            }
+        }
+
+
+
+        function koreguoti_btn() {
+            document.getElementById("new_pics").style.display = "block";
+            document.getElementById("atsaukti").style.display = "block";
+            document.getElementById("fileUpload").style.display = "block";
+            document.getElementById("my_label").style.display = "block";
+
+            btns = document.querySelectorAll("#see_koreguoti");
+            btns.forEach(function(button) {
+                button.style.display = "block";
+            });
+
+            delete_btns = document.querySelectorAll("#deletion");
+            delete_btns.forEach(function(del_button) {
+                del_button.style.display = "block";
+            });
+        }
+
+        function atsaukti_btn() {
+            document.getElementById("atsaukti").style.display = "none";
+            document.getElementById("new_pics").style.display = "none";
+            document.getElementById("fileUpload").style.display = "none";
+            document.getElementById("my_label").style.display = "none";
+            btns = document.querySelectorAll("#see_koreguoti");
+            btns.forEach(function(button) {
+                button.style.display = "none";
+            });
+            delete_btns = document.querySelectorAll("#deletion");
+            delete_btns.forEach(function(del_button) {
+                del_button.style.display = "none";
+            });
+        }
+
+        // after clicking ziureti, the client info is received from server and i can then add logic to edit inputs and post new pictures
+        conn.on("klientas", function(data) {
+            const kliento_info_ul = document.getElementById("clients_information");
+            kliento_info_ul.style.display = "block";
+            kliento_info_ul.innerHTML = "";
+            kliento_info_ul.style.display = "block";
+
+            let client_n = data.client_v;  //getting values sent by server
+            let client_l = data.client_p;
+            const nuotraukos = data.pic_names;
+            console.log("pic_names:", data.pic_names);
+
+
+            const upload_input = document.createElement("input");  //making sure input will accept files more than one as images
+            upload_input.type = "file";
+            upload_input.accept = "image/*";
+            upload_input.multiple = true;
+            upload_input.id = "fileUpload"; //adding id to input
+
+            // label
+            const upload_label = document.createElement("label");
+            upload_label.id = "my_label";
+            upload_label.textContent = "Įkelti nuotraukas";
+            upload_label.setAttribute("for", "fileUpload");  //id was necessary for attribute to be set
+
+            // upload button
+            
+            const new_pic = document.createElement("button");
+            new_pic.id = "new_pics";
+            new_pic.textContent = "Įterpti nuotraukas";
+            new_pic.onclick = function() {  //on the onclick, if 0 pics where selected (files), alert.
+                const files = upload_input.files;
+                if (files.length === 0) {
+                    alert("Pasirinkite bent vieną failą.");
+                    return;
+                }
+                const formData = new FormData(); //otherwise i create a form data into which i insert clients name, lastname and files
+                for (let file of files) formData.append("images", file);
+                formData.append("vardas", client_n);
+                formData.append("pavarde", client_l);
+
+                fetch("/upload_images", { method: "POST", body: formData }) //posting to flask this formdata.
+                .then(res => res.json())
+                .then(result => {
+                    // refresh client info
+                    kliento_info_ul.style.display = "none"; 
+                    const msg = document.getElementById("message");
+                    msg.textContent = "Sekmingai įterpta";
+                    msg.style.color = "green";
+                    msg.style.display = "block";
+                    setTimeout(() => (msg.style.display = "none"), 3000); //after 3sec. alert will dsiappear
+                    conn.emit("see_client", { name: [client_n, client_l] });  //refreshing page after posting pictures by setting display to none and quickly requesting
+                })
+                .catch(err => {
+                    console.error("Upload error:", err);
+                    const msg = document.getElementById("message");
+                    msg.textContent = "Nepavyko";
+                    msg.style.color = "red";
+                    msg.style.display = "block";
+                    setTimeout(() => (msg.style.display = "none"), 3000);
+                });
+            };
+
+        
+            kliento_info_ul.appendChild(upload_label);
+            kliento_info_ul.appendChild(upload_input);
+            kliento_info_ul.appendChild(new_pic); //appending input label and img elements to ul
+
+
+            const whole_client_info = data.kliento_info;
+            whole_client_info.forEach(function([column_name, column_value]) {  //extracting both descriptions of sqlite table and values
+                const li = document.createElement("li");
+
+            
+                const info_span = document.createElement("span");
+                info_span.textContent = `${column_name}: ${column_value}`;
+                const edit_input_btn = document.createElement("button");
+                edit_input_btn.textContent = "Koreguoti";
+                edit_input_btn.id = "see_koreguoti";
+
+                edit_input_btn.onclick = function() {
+                    info_span.style.display = "none";
+                    edit_input_btn.style.display = "none";
+
+                    
+                    const wrapper = document.createElement("div");
+                    wrapper.style.marginTop = "8px";
+
+                    const input_for_edit = document.createElement("textarea");
+                    input_for_edit.value = column_value;
+
+                    const finished_edit_btn = document.createElement("button");
+                    finished_edit_btn.textContent = "Pakeisti";
+                    finished_edit_btn.style.marginRight = "5px";
+
+                    const close_edit_btn = document.createElement("button");
+                    close_edit_btn.textContent = "Atšaukti";
+
+                    wrapper.append(input_for_edit, finished_edit_btn, close_edit_btn);
+                    li.appendChild(wrapper);
+
+                    // adding older name values, for sqlite db to detect them and change them into new ones
+                    let original_name = data.client_v;
+                    let original_lastname = data.client_p;
+
+                    finished_edit_btn.onclick = function() {
+                        const input_value = input_for_edit.value.trim();
+                        if (input_value.length === 0) return;
+
+
+                        if (column_name === "vardas") { //in table description was vardas or lastname, i overwrite in the client_n and client_l
+                            client_n = input_value; //otherwise it wouldnt send out newly changed values and sqlite wouldnt update properly
+                        } else if (column_name === "pavarde") {
+                            client_l = input_value;
+                        } 
+
+                        conn.emit("change_input", {
+                            input_value: input_value,
+                            old_name: original_name,
+                            old_lastname: original_lastname,
+                            client_name: client_n,
+                            client_lastname: client_l,
+                            whats_changed: column_name
+                        });
+                        document.getElementById("")
+                        kliento_info_ul.style.display = "none";
+                        setTimeout(() => {
+                            conn.emit("see_client", { name: [client_n, client_l]}); // for refreshing ul purposes
+
+                            const klientu_input = document.getElementById("rasti_kl").value.trim();
+                            conn.emit("find_clients", {"klientu_search" : klientu_input});
+                        }, 1500);
+
+                        info_span.textContent = `${column_name}: ${input_value}`;
+                        wrapper.remove();
+                        info_span.style.display = "";
+                        edit_input_btn.style.display = "";
+                    };
+
+                    close_edit_btn.onclick = function() {
+                        wrapper.remove();
+                        info_span.style.display = "";
+                        edit_input_btn.style.display = "";
+                    };
+                    };
+
+                    li.append(info_span, edit_input_btn);
+                    kliento_info_ul.appendChild(li);
+                });
+
+
+                if (nuotraukos.length > 0) {
+                    
+                    const picLi = document.createElement("li");
+                    picLi.classList.add("pic-container");
+
+                    nuotraukos.forEach(function(filename) {
+                        const img = document.createElement("img");
+                        img.src = filename;
+                        img.alt = "Kliento nuotrauka";
+                        img.classList.add("client-thumb");
+                        img.addEventListener("click", () => img.classList.toggle("large")); //adding ability for picture to become large after click
+
+                        const delete_btn = document.createElement("button");
+                        delete_btn.textContent = "Ištrinti";
+                        delete_btn.style.backgroundColor = "red";
+                        delete_btn.style.color = "white";
+                        delete_btn.id = "deletion";
+
+                        delete_btn.onclick = function() {
+                            edited_pic_name = filename.split('.com/')[1].split('?')[0];
+
+
+                            conn.emit("delete_pic", {
+                            delete: edited_pic_name,
+                            client_name: client_n,
+                            client_lastname: client_l
+                            });
+                            const msg = document.getElementById("message");
+                            msg.textContent = "Ištrinta!";
+                            msg.style.color = "green";
+                            msg.style.display = "block";
+                            setTimeout(() => (msg.style.display = "none"), 3000);
+
+                            // refresh after server delete
+                            setTimeout(() => {
+                                kliento_info_ul.style.display = "none";
+                                conn.emit("see_client", { name: [client_n, client_l] }); //for refreshing ul purposes
+                            }, 350);
+                        }
+
+                    picLi.append(img, delete_btn);
+                });
+
+                kliento_info_ul.appendChild(picLi);
+                }
+            })
+        
+            
+
+
+        function close_client_info() {
+            document.getElementById("check_client").style.display = "none";
+            document.getElementById("client_list").style.display = "block";
+            document.getElementById("creation").style.display = "block";
+            
+            const klientu_input = document.getElementById("rasti_kl").value.trim();
+            conn.emit("find_clients", {"klientu_search" : klientu_input});
+        }
+
+
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>
